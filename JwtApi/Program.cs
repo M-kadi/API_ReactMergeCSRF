@@ -101,50 +101,6 @@ services.AddSession(o =>
     o.IdleTimeout = TimeSpan.FromHours(8);
 });
 
-// CSRF tokens: cookie + header
-//services.AddAntiforgery(o =>
-//{
-//    o.HeaderName = "X-CSRF";                  // what the client must send
-//    o.Cookie.Name = "__Host-bff-csrf";        // HttpOnly cookie storing the token
-//    o.Cookie.HttpOnly = true;
-//    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-//    o.Cookie.SameSite = SameSiteMode.Strict;  // cookie not sent cross-site
-//});
-
-// Add antiforgery
-//builder.Services.AddAntiforgery(o =>
-//{
-//    o.HeaderName = "X-CSRF";
-//    o.Cookie.Name = "bff-csrf";
-//    o.Cookie.SameSite = SameSiteMode.None;
-//    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-//});
-
-// after services.AddAntiforgery(...)
-//builder.Services.AddAntiforgery(o =>
-//{
-//    o.Cookie.Name = "bff-csrf";
-//    o.HeaderName = "X-CSRF";
-
-//#if DEBUG
-//    o.Cookie.SecurePolicy = CookieSecurePolicy.None; // allow over HTTP (local dev only)
-//#else
-//    o.Cookie.SecurePolicy = CookieSecurePolicy.Always; // production
-//#endif
-
-//    o.Cookie.SameSite = SameSiteMode.None; // cross-site (React dev origin)
-//    o.Cookie.HttpOnly = false;             // readable by JS to set header value
-//});
-
-//builder.Services.AddAntiforgery(options =>
-//{
-//    options.HeaderName = "X-CSRF";
-//    options.Cookie.Name = "bff-csrf";
-//    options.Cookie.SameSite = SameSiteMode.Strict;
-//    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Use SameAsRequest for localhost
-//    options.Cookie.HttpOnly = false; // Allow JavaScript access if needed
-//});
-
 builder.Services.AddAntiforgery(options => // ok ok : postman login + students post ok https
 {
     options.HeaderName = "X-CSRF";
@@ -154,16 +110,6 @@ builder.Services.AddAntiforgery(options => // ok ok : postman login + students p
     options.Cookie.HttpOnly = true; // Should be true for security
     options.Cookie.Path = "/bff"; // Scope cookie to BFF routes only
 });
-
-//builder.Services.AddAntiforgery(options => 
-//{
-//    options.HeaderName = "X-CSRF";
-//    options.Cookie.Name = "bff-csrf";
-//    options.Cookie.SameSite = SameSiteMode.None; // Changed from Strict to Lax
-//    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
-//    options.Cookie.HttpOnly = false; // Should be true for security
-//    options.Cookie.Path = "/bff"; // Scope cookie to BFF routes only
-//});
 
 // CORS for React dev server
 services.AddCors(o =>
@@ -236,110 +182,6 @@ app.UseHttpsRedirection();
 app.UseCors("react");
 app.UseSession();
 
-// CSRF guard for unsafe BFF routes (POST/PUT/DELETE)
-//app.Use(async (ctx, next) =>
-//{
-//    if (ctx.Request.Path.StartsWithSegments("/bff") &&
-//        (HttpMethods.IsPost(ctx.Request.Method) ||
-//         HttpMethods.IsPut(ctx.Request.Method) ||
-//         HttpMethods.IsDelete(ctx.Request.Method)))
-//    {
-//        var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();
-//        await af.ValidateRequestAsync(ctx); // requires valid X-CSRF header matching cookie
-//    }
-//    await next();
-//});
-
-// CSRF guard only for unsafe BFF routes (not for login/logout/csrf)
-//app.Use(async (ctx, next) =>
-//{
-//    var m = ctx.Request.Method;
-//    var p = ctx.Request.Path;
-
-//    bool isBff = p.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase);
-//    bool isUnsafe = HttpMethods.IsPost(m) || HttpMethods.IsPut(m) || HttpMethods.IsDelete(m);
-
-//    if (isBff && isUnsafe &&
-//        !p.StartsWithSegments("/bff/login", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/logout", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/csrf", StringComparison.OrdinalIgnoreCase))
-//    {
-//        var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();
-//        await af.ValidateRequestAsync(ctx);     // requires X-CSRF header that matches cookie
-//    }
-
-//    await next();
-//});
-
-// Replace your CSRF middleware with this improved version:
-//app.Use(async (ctx, next) =>
-//{
-//    var m = ctx.Request.Method;
-//    var p = ctx.Request.Path;
-
-//    bool isBff = p.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase);
-//    bool isUnsafe = HttpMethods.IsPost(m) || HttpMethods.IsPut(m) || HttpMethods.IsDelete(m);
-
-//    if (isBff && isUnsafe &&
-//        !p.StartsWithSegments("/bff/login", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/logout", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/csrf", StringComparison.OrdinalIgnoreCase))
-//    {
-//        try
-//        {
-//            var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();
-
-//            // Debug logging
-//            var cookieToken = ctx.Request.Cookies["bff-csrf"];
-//            var headerToken = ctx.Request.Headers["X-CSRF"].FirstOrDefault();
-//            Console.WriteLine($"CSRF Debug - Cookie: {cookieToken?.Length ?? 0} chars, Header: {headerToken?.Length ?? 0} chars");
-
-//            await af.ValidateRequestAsync(ctx);
-//            Console.WriteLine("✅ CSRF validation passed");
-//        }
-//        catch (AntiforgeryValidationException ex)
-//        {
-//            Console.WriteLine($"❌ CSRF validation failed: {ex.Message}");
-//            ctx.Response.StatusCode = 400;
-//            await ctx.Response.WriteAsync($"CSRF validation failed: {ex.Message}");
-//            return;
-//        }
-//    }
-
-//    await next();
-//});
-
-// Custom session-based CSRF (simpler, avoids claims issues)
-//app.Use(async (ctx, next) =>  /// ok ok : postman login + students post ok
-//{
-//    var m = ctx.Request.Method;
-//    var p = ctx.Request.Path;
-
-//    bool isBff = p.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase);
-//    bool isUnsafe = HttpMethods.IsPost(m) || HttpMethods.IsPut(m) || HttpMethods.IsDelete(m);
-
-//    if (isBff && isUnsafe &&
-//        !p.StartsWithSegments("/bff/login", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/logout", StringComparison.OrdinalIgnoreCase) &&
-//        !p.StartsWithSegments("/bff/csrf", StringComparison.OrdinalIgnoreCase))
-//    {
-//        var sessionCsrf = ctx.Session.GetString("CSRF-Token");
-//        var headerCsrf = ctx.Request.Headers["X-CSRF"].FirstOrDefault();
-
-//        if (string.IsNullOrEmpty(headerCsrf) || headerCsrf != sessionCsrf)
-//        {
-//            Console.WriteLine($"❌ CSRF mismatch - Session: {sessionCsrf?.Length ?? 0}, Header: {headerCsrf?.Length ?? 0}");
-//            ctx.Response.StatusCode = 400;
-//            await ctx.Response.WriteAsync("Invalid CSRF token");
-//            return;
-//        }
-
-//        Console.WriteLine("✅ Session-based CSRF validation passed");
-//    }
-
-//    await next();
-//});
-
 app.Use(async (ctx, next) =>
 {
     var m = ctx.Request.Method;
@@ -411,59 +253,6 @@ async Task<IResult> ProxyTo(HttpContext ctx, string pathAndQuery)
 // -----------------------------
 // BFF endpoints
 // -----------------------------
-
-// 1) Get CSRF token (sets HttpOnly cookie + returns token in JSON for header use)
-//app.MapGet("/bff/csrf", (HttpContext ctx, IAntiforgery af) =>
-//{
-//    var tokens = af.GetAndStoreTokens(ctx);         // sets __Host-bff-csrf cookie
-//    return Results.Ok(new { csrf = tokens.RequestToken }); // client must send X-CSRF: <token>
-//});
-
-//// CSRF bootstrap endpoint (gives the cookie and a token for convenience)
-//app.MapGet("/bff/csrf", (HttpContext ctx, IAntiforgery af) =>
-//{
-//    var t = af.GetAndStoreTokens(ctx);         // sets the cookie
-//    return Results.Ok(new { token = t.RequestToken });
-//})
-//.DisableAntiforgery();
-
-// Replace your current /bff/csrf endpoint with this:
-//app.MapGet("/bff/csrf", async (HttpContext ctx, IAntiforgery af) =>
-//{
-//    try
-//    {
-//        // Clear any existing cookies first to ensure fresh tokens
-//        ctx.Response.Cookies.Delete("bff-csrf");
-
-//        // Generate new tokens
-//        var tokens = af.GetAndStoreTokens(ctx);
-
-//        // Debug logging
-//        Console.WriteLine($"Generated CSRF Token: {tokens.RequestToken?.Length ?? 0} chars");
-//        Console.WriteLine($"Generated Cookie Token: {tokens.CookieToken?.Length ?? 0} chars");
-
-//        // Return the request token for the header
-//        return Results.Ok(new
-//        {
-//            token = tokens.RequestToken,
-//            cookieName = "bff-csrf",
-//            headerName = "X-CSRF",
-//            debug = new
-//            {
-//                requestTokenLength = tokens.RequestToken?.Length,
-//                cookieTokenLength = tokens.CookieToken?.Length,
-//                cookieValue = tokens.CookieToken?.Substring(0, 20) + "..."
-//            }
-//        });
-//    }
-//    catch (Exception ex)
-//    {
-//        Console.WriteLine($"CSRF Token generation error: {ex}");
-//        return Results.Problem($"Failed to generate CSRF token: {ex.Message}");
-//    }
-//})
-//.DisableAntiforgery(); // Important: Don't validate CSRF when getting the token
-
 // Updated CSRF endpoint for session-based tokens
 app.MapGet("/bff/csrf", (HttpContext ctx) =>
 {
